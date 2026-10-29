@@ -1,0 +1,55 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+int gcd(int a, int b)
+{
+    while (b != 0)
+    {
+        int t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+
+int main()
+{
+    char text[1000];
+    int a, b, i, x;
+
+    printf("Enter ciphertext: ");
+    fgets(text, sizeof(text), stdin);
+
+    printf("Possible decrypted text:\n");
+
+    for (a = 1; a < 26; a++)
+    {
+        if (gcd(a, 26) == 1)
+        {
+            for (b = 0; b < 26; b++)
+            {
+                printf("\na=%d, b=%d: ", a, b);
+
+                for (i = 0; text[i] != '\0'; i++)
+                {
+                    if (isalpha(text[i]))
+                    {
+                        x = toupper(text[i]) - 'A';
+                        int j;
+                        for (j = 1; j < 26; j++)
+                            if ((a * j) % 26 == 1)
+                                break;
+
+                        x = (j * (x - b + 26)) % 26;
+                        putchar(x + 'A');
+                    }
+                    else
+                        putchar(text[i]);
+                }
+            }
+        }
+    }
+
+    return 0;
+}
