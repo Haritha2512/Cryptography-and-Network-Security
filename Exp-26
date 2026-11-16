@@ -1,0 +1,95 @@
+#include <stdio.h>
+
+long long extendedGCD(long long a, long long b,
+                      long long *x, long long *y)
+{
+    if (b == 0) {
+        *x = 1;
+        *y = 0;
+        return a;
+    }
+
+    long long x1, y1;
+    long long gcd = extendedGCD(b, a % b, &x1, &y1);
+
+    *x = y1;
+    *y = x1 - (a / b) * y1;
+
+    return gcd;
+}
+
+long long modPower(long long base, long long exp, long long mod)
+{
+    long long result = 1;
+
+    while (exp > 0) {
+        if (exp % 2 == 1)
+            result = (result * base) % mod;
+
+        base = (base * base) % mod;
+        exp /= 2;
+    }
+
+    return result;
+}
+
+int main()
+{
+    long long n = 3233;
+    long long oldE = 17;
+    long long leakedD = 2753;
+    long long newE = 7;
+    long long p = 0, q = 0;
+
+    printf("RSA KEY COMPROMISE DEMONSTRATION\n");
+    printf("--------------------------------\n");
+
+    printf("Old public exponent = %lld\n", oldE);
+    printf("Leaked private exponent = %lld\n", leakedD);
+    printf("Modulus = %lld\n", n);
+
+    for (long long i = 2; i * i <= n; i++) {
+        if (n % i == 0) {
+            p = i;
+            q = n / i;
+            break;
+        }
+    }
+
+    printf("\nAttacker discovers the factors:\n");
+    printf("p = %lld\n", p);
+    printf("q = %lld\n", q);
+
+    long long phi = (p - 1) * (q - 1);
+
+    printf("\nphi(n) = %lld\n", phi);
+
+    long long x, y;
+    extendedGCD(newE, phi, &x, &y);
+
+    if (newE <= 1 || x == 0 ||
+        (newE * x + phi * y) != 1) {
+        printf("Invalid new public exponent.\n");
+        return 1;
+    }
+
+    long long newD = (x % phi + phi) % phi;
+
+    printf("\nBob generates new keys:\n");
+    printf("New public exponent = %lld\n", newE);
+    printf("New private exponent = %lld\n", newD);
+
+    printf("\nThe modulus remains = %lld\n", n);
+
+    long long message = 65;
+    long long cipher = modPower(message, newE, n);
+    long long decrypted = modPower(cipher, newD, n);
+
+    printf("\nMessage = %lld\n", message);
+    printf("Encrypted message = %lld\n", cipher);
+    printf("Decrypted message = %lld\n", decrypted);
+
+    printf("\nConclusion: Reusing the old modulus is unsafe.\n");
+
+    return 0;
+}
