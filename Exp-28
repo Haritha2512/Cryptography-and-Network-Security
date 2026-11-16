@@ -1,0 +1,70 @@
+#include <stdio.h>
+
+long long modPower(long long base, long long exp, long long mod)
+{
+    long long result = 1;
+    base %= mod;
+
+    while (exp > 0) {
+        if (exp % 2 == 1)
+            result = (result * base) % mod;
+
+        base = (base * base) % mod;
+        exp /= 2;
+    }
+
+    return result;
+}
+
+int main()
+{
+    long long q = 23;
+    long long a = 5;
+
+    long long x = 6;   
+    long long y = 15;  
+
+    long long A = modPower(a, x, q);
+    long long B = modPower(a, y, q);
+
+    long long keyAlice = modPower(B, x, q);
+    long long keyBob = modPower(A, y, q);
+
+    printf("DIFFIE-HELLMAN KEY EXCHANGE\n");
+    printf("---------------------------\n");
+
+    printf("Public prime q = %lld\n", q);
+    printf("Public base a = %lld\n", a);
+
+    printf("\nPrivate values:\n");
+    printf("Alice's secret x = %lld\n", x);
+    printf("Bob's secret y = %lld\n", y);
+
+    printf("\nPublic values exchanged:\n");
+    printf("Alice sends A = %lld\n", A);
+    printf("Bob sends B = %lld\n", B);
+
+    printf("\nShared secret keys:\n");
+    printf("Alice's key = %lld\n", keyAlice);
+    printf("Bob's key = %lld\n", keyBob);
+
+    if (keyAlice == keyBob)
+        printf("Shared key established successfully!\n");
+
+    long long wrongAlice = modPower(x, a, q);
+    long long wrongBob = modPower(y, a, q);
+
+    long long wrongKeyAlice = modPower(wrongBob, x, q);
+    long long wrongKeyBob = modPower(wrongAlice, y, q);
+
+    printf("\nUsing x^a instead of a^x:\n");
+    printf("Alice sends = %lld\n", wrongAlice);
+    printf("Bob sends = %lld\n", wrongBob);
+    printf("Alice's resulting value = %lld\n", wrongKeyAlice);
+    printf("Bob's resulting value = %lld\n", wrongKeyBob);
+
+    if (wrongKeyAlice != wrongKeyBob)
+        printf("The resulting values are NOT equal.\n");
+
+    return 0;
+}
