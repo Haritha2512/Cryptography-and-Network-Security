@@ -1,0 +1,126 @@
+#include <stdio.h>
+#include <string.h>
+
+long long modPower(long long base, long long exp, long long mod)
+{
+    long long result = 1;
+    base %= mod;
+
+    while (exp > 0) {
+        if (exp % 2 == 1)
+            result = (result * base) % mod;
+
+        base = (base * base) % mod;
+        exp /= 2;
+    }
+
+    return result;
+}
+
+long long extendedGCD(long long a, long long b,
+                      long long *x, long long *y)
+{
+    if (b == 0) {
+        *x = 1;
+        *y = 0;
+        return a;
+    }
+
+    long long x1, y1;
+    long long gcd = extendedGCD(b, a % b, &x1, &y1);
+
+    *x = y1;
+    *y = x1 - (a / b) * y1;
+
+    return gcd;
+}
+
+long long modInverse(long long a, long long m)
+{
+    long long x, y;
+    extendedGCD(a, m, &x, &y);
+    return (x % m + m) % m;
+}
+
+long long hashMessage(char message[], long long mod)
+{
+    long long hash = 0;
+
+    for (int i = 0; message[i] != '\0'; i++)
+        hash = (hash + message[i]) % mod;
+
+    return hash;
+}
+
+void dsaSign(long long H, long long p, long long q,
+             long long g, long long x, long long k,
+             long long *r, long long *s)
+{
+    *r = modPower(g, k, p) % q;
+
+    long long kinv = modInverse(k, q);
+
+    *s = (kinv * (H + x * (*r))) % q;
+}
+
+long long rsaSign(long long H, long long d, long long n)
+{
+    return modPower(H, d, n);
+}
+
+int main()
+{
+    char message[] = "HELLO";
+
+    printf("DSA AND RSA DIGITAL SIGNATURE COMPARISON\n");
+    printf("----------------------------------------\n");
+    printf("Message: %s\n", message);
+
+    long long p = 23;
+    long long q = 11;
+    long long g = 4;
+    long long x = 3;       
+
+    long long H = hashMessage(message, q);
+
+    long long k1 = 2;
+    long long k2 = 3;
+
+    long long r1, s1, r2, s2;
+
+    dsaSign(H, p, q, g, x, k1, &r1, &s1);
+    dsaSign(H, p, q, g, x, k2, &r2, &s2);
+
+    printf("\nDSA SIGNATURES\n");
+    printf("Hash value = %lld\n", H);
+
+    printf("First signature:  (r = %lld, s = %lld)\n",
+           r1, s1);
+
+    printf("Second signature: (r = %lld, s = %lld)\n",
+           r2, s2);
+
+    if (r1 != r2 || s1 != s2)
+        printf("DSA signatures are different.\n");
+
+    long long n = 143;
+    long long e = 7;
+    long long d = 103;
+
+    long long rsaHash = hashMessage(message, 11);
+
+    long long rsaSig1 = rsaSign(rsaHash, d, n);
+    long long rsaSig2 = rsaSign(rsaHash, d, n);
+
+    printf("\nRSA SIGNATURES\n");
+    printf("Public exponent = %lld\n", e);
+    printf("Private exponent = %lld\n", d);
+
+    printf("First signature  = %lld\n", rsaSig1);
+    printf("Second signature = %lld\n", rsaSig2);
+
+    if (rsaSig1 == rsaSig2)
+        printf("Deterministic RSA signatures are identical.\n");
+
+    return 0;
+}
