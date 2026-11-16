@@ -1,0 +1,202 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX 5000
+#define MAX_TOP 50
+
+double englishFreq[26] = {
+    8.167, 1.492, 2.782, 4.253, 12.702,
+    2.228, 2.015, 6.094, 6.966, 0.153,
+    0.772, 4.025, 2.406, 6.749, 7.507,
+    1.929, 0.095, 5.987, 6.327, 9.056,
+    2.758, 0.978, 2.360, 0.150, 1.974, 0.074
+};
+
+char cipher[MAX];
+
+typedef struct {
+    char key[26];
+    char plaintext[MAX];
+    double score;
+} Candidate;
+
+void sortLetters(int count[], char letters[])
+{
+    for (int i = 0; i < 26; i++)
+        letters[i] = 'A' + i;
+
+    for (int i = 0; i < 25; i++) {
+        for (int j = i + 1; j < 26; j++) {
+            if (count[letters[j] - 'A'] >
+                count[letters[i] - 'A']) {
+
+                char temp = letters[i];
+                letters[i] = letters[j];
+                letters[j] = temp;
+            }
+        }
+    }
+}
+
+void decrypt(char key[], char output[])
+{
+    int i;
+
+    for (i = 0; cipher[i] != '\0'; i++) {
+        char ch = cipher[i];
+
+        if (isalpha((unsigned char)ch)) {
+            int index = toupper((unsigned char)ch) - 'A';
+            char result = key[index];
+
+            output[i] = islower((unsigned char)ch)
+                      ? tolower((unsigned char)result)
+                      : result;
+        }
+        else {
+            output[i] = ch;
+        }
+    }
+
+    output[i] = '\0';
+}
+
+double calculateScore(char key[], int count[], int total)
+{
+    double score = 0.0;
+
+    for (int i = 0; i < 26; i++) {
+        int plainIndex = key[i] - 'A';
+
+        double expected =
+            total * englishFreq[plainIndex] / 100.0;
+
+        double difference = count[i] - expected;
+
+        if (expected > 0.0)
+            score += difference * difference / expected;
+    }
+
+    return score;
+}
+
+void sortCandidates(Candidate candidates[], int n)
+{
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (candidates[j].score < candidates[i].score) {
+                Candidate temp = candidates[i];
+                candidates[i] = candidates[j];
+                candidates[j] = temp;
+            }
+        }
+    }
+}
+
+int main()
+{
+    int count[26] = {0};
+    int total = 0;
+    int top;
+
+    char cipherLetters[26];
+    char englishLetters[26];
+
+    Candidate candidates[MAX_TOP];
+
+    printf("MONOALPHABETIC CIPHER FREQUENCY ATTACK\n");
+    printf("--------------------------------------\n");
+
+    printf("Enter ciphertext:\n");
+
+    if (fgets(cipher, sizeof(cipher), stdin) == NULL)
+        return 1;
+
+    cipher[strcspn(cipher, "\n")] = '\0';
+
+    for (int i = 0; cipher[i] != '\0'; i++) {
+        if (isalpha((unsigned char)cipher[i])) {
+            count[toupper((unsigned char)cipher[i]) - 'A']++;
+            total++;
+        }
+    }
+
+    if (total == 0) {
+        printf("No alphabetic characters found.\n");
+        return 1;
+    }
+
+    printf("Enter number of possible plaintexts (1-50): ");
+
+    if (scanf("%d", &top) != 1 || top < 1 || top > MAX_TOP) {
+        printf("Invalid number.\n");
+        return 1;
+    }
+
+    sortLetters(count, cipherLetters);
+
+    int englishCount[26];
+
+    for (int i = 0; i < 26; i++)
+        englishCount[i] = (int)(englishFreq[i] * 1000);
+
+    sortLetters(englishCount, englishLetters);
+
+    char baseKey[26];
+
+    for (int i = 0; i < 26; i++)
+        baseKey[cipherLetters[i] - 'A'] = englishLetters[i];
+
+    int candidateCount = 0;
+
+    for (int a = 0; a < 26 && candidateCount < top; a++) {
+        for (int b = a + 1; b < 26 && candidateCount < top; b++) {
+
+            strcpy(candidates[candidateCount].key, baseKey);
+
+            char temp = candidates[candidateCount].key[
+                cipherLetters[a] - 'A'];
+
+            candidates[candidateCount].key[
+                cipherLetters[a] - 'A'] =
+                candidates[candidateCount].key[
+                cipherLetters[b] - 'A'];
+
+            candidates[candidateCount].key[
+                cipherLetters[b] - 'A'] = temp;
+
+            candidates[candidateCount].score =
+                calculateScore(candidates[candidateCount].key,
+                               count, total);
+
+            decrypt(candidates[candidateCount].key,
+                    candidates[candidateCount].plaintext);
+
+            candidateCount++;
+        }
+    }
+    if (candidateCount < top) {
+        strcpy(candidates[candidateCount].key, baseKey);
+
+        candidates[candidateCount].score =
+            calculateScore(baseKey, count, total);
+
+        decrypt(baseKey, candidates[candidateCount].plaintext);
+
+        candidateCount++;
+    }
+
+    sortCandidates(candidates, candidateCount);
+
+    printf("\nTOP %d POSSIBLE PLAINTEXTS\n", top);
+    printf("--------------------------\n");
+
+    for (int i = 0; i < candidateCount; i++) {
+        printf("\nCandidate %d\n", i + 1);
+        printf("Score: %.3f\n", candidates[i].score);
+        printf("Plaintext: %s\n", candidates[i].plaintext);
+    }
+
+    return 0;
+}
