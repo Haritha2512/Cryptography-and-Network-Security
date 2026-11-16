@@ -1,0 +1,61 @@
+#include <stdio.h>
+#include <string.h>
+
+void leftShift(unsigned char input[], unsigned char output[],
+               int size, unsigned char Rb)
+{
+    int i;
+    unsigned char carry = 0;
+    unsigned char msb = input[0] & 0x80;
+
+    for (i = size - 1; i >= 0; i--) {
+        unsigned char nextCarry = (input[i] & 0x80) ? 1 : 0;
+
+        output[i] = (input[i] << 1) | carry;
+        carry = nextCarry;
+    }
+
+    if (msb)
+        output[size - 1] ^= Rb;
+}
+
+void printBlock(char name[], unsigned char block[], int size)
+{
+    printf("%s = ", name);
+
+    for (int i = 0; i < size; i++)
+        printf("%02X", block[i]);
+
+    printf("\n");
+}
+
+void generateSubkeys(int size, unsigned char Rb)
+{
+    unsigned char L[16] = {0};
+    unsigned char K1[16] = {0};
+    unsigned char K2[16] = {0};
+
+    printf("\nCMAC for %d-bit block size\n", size * 8);
+
+    L[0] = 0x80;
+
+    printBlock("L ", L, size);
+
+    leftShift(L, K1, size, Rb);
+
+    leftShift(K1, K2, size, Rb);
+
+    printBlock("K1", K1, size);
+    printBlock("K2", K2, size);
+}
+
+int main()
+{
+    printf("CMAC SUBKEY GENERATION\n");
+    printf("----------------------\n");
+
+    generateSubkeys(8, 0x1B);  
+    generateSubkeys(16, 0x87);  
+
+    return 0;
+}
