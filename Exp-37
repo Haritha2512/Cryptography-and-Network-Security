@@ -1,0 +1,192 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
+
+#define MAX 5000
+#define LETTERS 26
+#define MAX_TOP 50
+
+double englishFreq[26] = {
+    8.167, 1.492, 2.782, 4.253, 12.702,
+    2.228, 2.015, 6.094, 6.966, 0.153,
+    0.772, 4.025, 2.406, 6.749, 7.507,
+    1.929, 0.095, 5.987, 6.327, 9.056,
+    2.758, 0.978, 2.360, 0.150, 1.974, 0.074
+};
+
+char ciphertext[MAX];
+
+typedef struct {
+    char key[26];
+    double score;
+    char text[MAX];
+} Candidate;
+
+double calculateScore(char key[])
+{
+    int count[26] = {0};
+    int total = 0;
+
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        if (isalpha((unsigned char)ciphertext[i])) {
+            count[toupper((unsigned char)ciphertext[i]) - 'A']++;
+            total++;
+        }
+    }
+
+    if (total == 0)
+        return 1e9;
+
+    double score = 0;
+
+    for (int i = 0; i < 26; i++) {
+        int plainLetter = key[i] - 'A';
+
+        double observed = 100.0 * count[i] / total;
+        double expected = englishFreq[plainLetter];
+
+        double difference = observed - expected;
+        score += difference * difference /
+                 (expected + 0.01);
+    }
+
+    return score;
+}
+
+void decrypt(char key[], char output[])
+{
+    int i;
+
+    for (i = 0; ciphertext[i] != '\0'; i++) {
+        char ch = ciphertext[i];
+
+        if (isalpha((unsigned char)ch)) {
+            int index = toupper((unsigned char)ch) - 'A';
+            char result = key[index];
+
+            output[i] = islower((unsigned char)ch)
+                      ? tolower((unsigned char)result)
+                      : result;
+        }
+        else {
+            output[i] = ch;
+        }
+    }
+
+    output[i] = '\0';
+}
+
+void randomKey(char key[])
+{
+    for (int i = 0; i < 26; i++)
+        key[i] = 'A' + i;
+
+    for (int i = 25; i > 0; i--) {
+        int j = rand() % (i + 1);
+
+        char temp = key[i];
+        key[i] = key[j];
+        key[j] = temp;
+    }
+}
+
+void saveCandidate(Candidate top[], int topCount,
+                   char key[], double score)
+{
+    for (int i = 0; i < topCount; i++) {
+        if (strcmp(top[i].key, key) == 0)
+            return;
+    }
+
+    if (score >= top[topCount - 1].score)
+        return;
+
+    int pos = topCount - 1;
+
+    while (pos > 0 && score < top[pos - 1].score) {
+        top[pos] = top[pos - 1];
+        pos--;
+    }
+
+    strcpy(top[pos].key, key);
+    top[pos].score = score;
+    decrypt(key, top[pos].text);
+}
+
+int main()
+{
+    int topCount;
+    Candidate top[MAX_TOP];
+
+    printf("MONOALPHABETIC SUBSTITUTION ATTACK\n");
+    printf("----------------------------------\n");
+
+    printf("Enter ciphertext:\n");
+
+    if (!fgets(ciphertext, sizeof(ciphertext), stdin))
+        return 1;
+
+    ciphertext[strcspn(ciphertext, "\n")] = '\0';
+
+    printf("How many possible plaintexts? ");
+    if (scanf("%d", &topCount) != 1 ||
+        topCount < 1 || topCount > MAX_TOP) {
+        printf("Enter a number between 1 and %d.\n", MAX_TOP);
+        return 1;
+    }
+
+    for (int i = 0; i < topCount; i++)
+        top[i].score = 1e9;
+
+    srand(1);
+
+    for (int trial = 0; trial < 300; trial++) {
+        char key[26];
+        randomKey(key);
+
+        double currentScore = calculateScore(key);
+
+        for (int step = 0; step < 3000; step++) {
+            int a = rand() % 26;
+            int b = rand() % 26;
+
+            while (a == b)
+                b = rand() % 26;
+
+            char temp = key[a];
+            key[a] = key[b];
+            key[b] = temp;
+
+            double newScore = calculateScore(key);
+
+            if (newScore < currentScore) {
+                currentScore = newScore;
+            }
+            else {
+                temp = key[a];
+                key[a] = key[b];
+                key[b] = temp;
+            }
+        }
+
+        saveCandidate(top, topCount, key, currentScore);
+    }
+
+    printf("\nTOP %d POSSIBLE PLAINTEXTS\n", topCount);
+    printf("--------------------------\n");
+
+    for (int i = 0; i < topCount; i++) {
+        if (top[i].score >= 1e9) {
+            printf("\nCandidate %d: Not found\n", i + 1);
+            continue;
+        }
+
+        printf("\nCandidate %d\n", i + 1);
+        printf("Score: %.4f\n", top[i].score);
+        printf("Plaintext: %s\n", top[i].text);
+    }
+
+    return 0;
+}
