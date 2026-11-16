@@ -1,0 +1,139 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+
+#define BLOCK 4
+#define MAX 256
+#define KEY 0xA56BABCD
+#define IV  0x12345678
+
+uint32_t encryptBlock(uint32_t x)
+{
+    x ^= KEY;
+    return (x << 5) | (x >> 27);
+}
+
+uint32_t decryptBlock(uint32_t x)
+{
+    x = (x >> 5) | (x << 27);
+    return x ^ KEY;
+}
+
+uint32_t loadBlock(unsigned char *p)
+{
+    return ((uint32_t)p[0] << 24) |
+           ((uint32_t)p[1] << 16) |
+           ((uint32_t)p[2] << 8) |
+           p[3];
+}
+
+void storeBlock(unsigned char *p, uint32_t x)
+{
+    p[0] = (x >> 24) & 255;
+    p[1] = (x >> 16) & 255;
+    p[2] = (x >> 8) & 255;
+    p[3] = x & 255;
+}
+
+void display(char *name, unsigned char data[], int len)
+{
+    printf("\n%s:\n", name);
+
+    for(int i = 0; i < len; i++)
+        printf("%02X ", data[i]);
+
+    printf("\n");
+}
+
+int main()
+{
+    unsigned char plaintext[MAX];
+    unsigned char padded[MAX];
+    unsigned char ecb[MAX], cbc[MAX], cfb[MAX];
+
+    int len, pad, total;
+
+    printf("Enter plaintext: ");
+    fgets((char *)plaintext, MAX, stdin);
+
+    len = strlen((char *)plaintext);
+
+    if(len > 0 && plaintext[len-1] == '\n')
+        len--;
+
+    if(len == 0 || len > MAX-4)
+    {
+        printf("Invalid plaintext length.\n");
+        return 1;
+    }
+
+    pad = BLOCK - (len % BLOCK);
+
+    if(pad == 0)
+        pad = BLOCK;
+
+    memcpy(padded, plaintext, len);
+
+    padded[len] = 0x80;
+
+    for(int i = 1; i < pad; i++)
+        padded[len+i] = 0x00;
+
+    total = len + pad;
+
+    printf("\nPadded Plaintext: ");
+
+    for(int i = 0; i < total; i++)
+        printf("%02X ", padded[i]);
+
+    printf("\n");
+
+    for(int i = 0; i < total; i += BLOCK)
+    {
+        uint32_t p = loadBlock(padded+i);
+        uint32_t c = encryptBlock(p);
+
+        storeBlock(ecb+i, c);
+    }
+
+    uint32_t previous = IV;
+
+    for(int i = 0; i < total; i += BLOCK)
+    {
+        uint32_t p = loadBlock(padded+i);
+
+        uint32_t c = encryptBlock(p ^ previous);
+
+        storeBlock(cbc+i, c);
+
+        previous = c;
+    }
+
+    previous = IV;
+
+    for(int i = 0; i < total; i += BLOCK)
+    {
+        uint32_t p = loadBlock(padded+i);
+
+        uint32_t stream = encryptBlock(previous);
+
+        uint32_t c = p ^ stream;
+
+        storeBlock(cfb+i, c);
+
+        previous = c;
+    }
+
+    printf("\nPlaintext: %s", plaintext);
+
+    display("ECB Encrypted Text", ecb, total);
+
+    display("CBC Encrypted Text", cbc, total);
+
+    display("CFB Encrypted Text", cfb, total);
+
+    printf("\nBlock Size: 32 bits");
+    printf("\nPadding: 1 bit followed by zero bits\n");
+
+    return 0;
+}
