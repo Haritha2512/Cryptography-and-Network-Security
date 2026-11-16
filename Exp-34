@@ -1,0 +1,142 @@
+#include <stdio.h>
+#include <string.h>
+#define MAX 100
+
+unsigned char KEY = 0x3A;
+unsigned char IV = 0xA5;
+unsigned char encryptBlock(unsigned char x)
+{
+    x ^= KEY;
+    return (unsigned char)((x << 3) | (x >> 5));
+}
+
+unsigned char decryptBlock(unsigned char x)
+{
+    x = (unsigned char)((x >> 3) | (x << 5));
+    return x ^ KEY;
+}
+int addPadding(unsigned char data[], int len)
+{
+    int paddedLen = len + 1;
+
+    while (paddedLen % 1 != 0)
+        paddedLen++;
+
+    data[len] = 0x80;
+
+    return paddedLen;
+}
+
+void ECB_Encrypt(unsigned char p[], unsigned char c[], int n)
+{
+    for (int i = 0; i < n; i++)
+        c[i] = encryptBlock(p[i]);
+}
+
+void ECB_Decrypt(unsigned char c[], unsigned char p[], int n)
+{
+    for (int i = 0; i < n; i++)
+        p[i] = decryptBlock(c[i]);
+}
+
+void CBC_Encrypt(unsigned char p[], unsigned char c[], int n)
+{
+    unsigned char prev = IV;
+
+    for (int i = 0; i < n; i++) {
+        c[i] = encryptBlock(p[i] ^ prev);
+        prev = c[i];
+    }
+}
+
+void CBC_Decrypt(unsigned char c[], unsigned char p[], int n)
+{
+    unsigned char prev = IV;
+
+    for (int i = 0; i < n; i++) {
+        p[i] = decryptBlock(c[i]) ^ prev;
+        prev = c[i];
+    }
+}
+
+void CFB_Encrypt(unsigned char p[], unsigned char c[], int n)
+{
+    unsigned char prev = IV;
+
+    for (int i = 0; i < n; i++) {
+        c[i] = p[i] ^ encryptBlock(prev);
+        prev = c[i];
+    }
+}
+
+void CFB_Decrypt(unsigned char c[], unsigned char p[], int n)
+{
+    unsigned char prev = IV;
+
+    for (int i = 0; i < n; i++) {
+        p[i] = c[i] ^ encryptBlock(prev);
+        prev = c[i];
+    }
+}
+
+void display(char label[], unsigned char data[], int n)
+{
+    printf("%s", label);
+
+    for (int i = 0; i < n; i++)
+        printf("%02X ", data[i]);
+
+    printf("\n");
+}
+
+int main()
+{
+    unsigned char plaintext[MAX] = "HELLO123";
+    unsigned char padded[MAX];
+    unsigned char ciphertext[MAX];
+    unsigned char decrypted[MAX];
+
+    int len = strlen((char *)plaintext);
+
+    memcpy(padded, plaintext, len);
+
+    int paddedLen = addPadding(padded, len);
+
+    printf("ECB, CBC AND CFB MODE IMPLEMENTATION\n");
+    printf("------------------------------------\n");
+
+    printf("Original plaintext: HELLO123\n");
+    printf("Block size: 8 bits\n");
+    printf("Key: %02X\n", KEY);
+    printf("IV: %02X\n", IV);
+
+    display("\nPadded plaintext: ", padded, paddedLen);
+
+    printf("\n--- ECB MODE ---\n");
+
+    ECB_Encrypt(padded, ciphertext, paddedLen);
+    display("Ciphertext: ", ciphertext, paddedLen);
+
+    ECB_Decrypt(ciphertext, decrypted, paddedLen);
+    display("Decrypted:  ", decrypted, paddedLen);
+
+    printf("\n--- CBC MODE ---\n");
+
+    CBC_Encrypt(padded, ciphertext, paddedLen);
+    display("Ciphertext: ", ciphertext, paddedLen);
+
+    CBC_Decrypt(ciphertext, decrypted, paddedLen);
+    display("Decrypted:  ", decrypted, paddedLen);
+
+    printf("\n--- CFB MODE ---\n");
+
+    CFB_Encrypt(padded, ciphertext, paddedLen);
+    display("Ciphertext: ", ciphertext, paddedLen);
+
+    CFB_Decrypt(ciphertext, decrypted, paddedLen);
+    display("Decrypted:  ", decrypted, paddedLen);
+
+    printf("\nAll three modes completed successfully.\n");
+
+    return 0;
+}
