@@ -1,0 +1,71 @@
+#include <stdio.h>
+#define MOD 26
+
+int mod(int x)
+{
+    return (x % MOD + MOD) % MOD;
+}
+
+int main()
+{
+    int key[2][2] = {
+        {9, 4},
+        {5, 7}
+    };
+
+    int P[2][2] = {
+        {1, 0},
+        {0, 1}
+    };
+
+    int C[2][2];
+
+    int i, j;
+
+    printf("Chosen Plaintext Matrix:\n");
+
+    for(i = 0; i < 2; i++)
+    {
+        for(j = 0; j < 2; j++)
+            printf("%d ", P[i][j]);
+
+        printf("\n");
+    }
+
+    for(i = 0; i < 2; i++)
+    {
+        for(j = 0; j < 2; j++)
+        {
+            C[i][j] = 0;
+
+            for(int k = 0; k < 2; k++)
+            {
+                C[i][j] += key[i][k] * P[k][j];
+            }
+
+            C[i][j] = mod(C[i][j]);
+        }
+    }
+
+    printf("\nObtained Ciphertext Matrix:\n");
+
+    for(i = 0; i < 2; i++)
+    {
+        for(j = 0; j < 2; j++)
+            printf("%d ", C[i][j]);
+
+        printf("\n");
+    }
+
+    printf("\nRecovered Secret Key:\n");
+
+    for(i = 0; i < 2; i++)
+    {
+        for(j = 0; j < 2; j++)
+            printf("%d ", C[i][j]);
+
+        printf("\n");
+    }
+
+    return 0;
+}
