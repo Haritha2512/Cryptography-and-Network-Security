@@ -1,0 +1,57 @@
+#include <stdio.h>
+
+unsigned char encrypt(unsigned char block, unsigned char key)
+{
+    unsigned char value = block ^ key;
+
+    return (unsigned char)((value << 3) | (value >> 5));
+}
+
+unsigned char cbcMac(unsigned char x1, unsigned char x2,
+                     unsigned char key)
+{
+    unsigned char c1 = encrypt(x1, key);
+    unsigned char c2 = encrypt(x2 ^ c1, key);
+
+    return c2;
+}
+
+int main()
+{
+    unsigned char key = 0xA7;
+    unsigned char X = 0x35;
+
+    unsigned char T = encrypt(X, key);
+
+    unsigned char secondBlock = X ^ T;
+
+    unsigned char forgedTag =
+        cbcMac(X, secondBlock, key);
+
+    printf("CBC-MAC ATTACK DEMONSTRATION\n");
+    printf("----------------------------\n");
+
+    printf("Secret key K       = 0x%02X\n", key);
+    printf("Original block X   = 0x%02X\n", X);
+
+    printf("\nOne-block message:\n");
+    printf("T = MAC(K, X)      = 0x%02X\n", T);
+
+    printf("\nConstructed two-block message:\n");
+    printf("Block 1 (X)        = 0x%02X\n", X);
+    printf("Block 2 (X XOR T)  = 0x%02X\n", secondBlock);
+
+    printf("\nCBC-MAC calculation:\n");
+    printf("First ciphertext  = 0x%02X\n", encrypt(X, key));
+    printf("Final MAC          = 0x%02X\n", forgedTag);
+
+    printf("\nOriginal MAC       = 0x%02X\n", T);
+    printf("Forged message MAC = 0x%02X\n", forgedTag);
+
+    if (T == forgedTag)
+        printf("\nAttack successful! Both MAC values are equal.\n");
+    else
+        printf("\nAttack failed.\n");
+
+    return 0;
+}
