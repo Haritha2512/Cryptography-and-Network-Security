@@ -1,0 +1,53 @@
+#include <stdio.h>
+#include <stdint.h>
+
+int shiftTable[16] = {
+    1, 1, 2, 2, 2, 2, 2, 2,
+    1, 2, 2, 2, 2, 2, 2, 1
+};
+
+uint32_t leftShift(uint32_t value, int shifts)
+{
+    return ((value << shifts) |
+           (value >> (28 - shifts))) & 0x0FFFFFFF;
+}
+
+void generateKeys(uint32_t C, uint32_t D,
+                  uint64_t keys[16])
+{
+    for(int i = 0; i < 16; i++)
+    {
+        C = leftShift(C, shiftTable[i]);
+        D = leftShift(D, shiftTable[i]);
+
+        keys[i] = ((uint64_t)C << 28) | D;
+    }
+}
+
+void generateDecryptionKeys(uint64_t keys[16])
+{
+    printf("\nDES Decryption Key Schedule:\n");
+
+    for(int i = 15; i >= 0; i--)
+    {
+        printf("K%d = %014llX\n",
+               i + 1,
+               (unsigned long long)keys[i]);
+    }
+}
+
+int main()
+{
+    uint32_t C = 0x0F0F0F0;
+    uint32_t D = 0x0AAAAAA;
+
+    uint64_t keys[16];
+
+    generateKeys(C, D, keys);
+
+    generateDecryptionKeys(keys);
+
+    printf("\nDecryption uses keys K16 to K1.\n");
+
+    return 0;
+}
