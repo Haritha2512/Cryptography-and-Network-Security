@@ -1,0 +1,72 @@
+#include <stdio.h>
+#include <string.h>
+
+long long modPower(long long base, long long exp, long long mod)
+{
+    long long result = 1;
+    base %= mod;
+
+    while (exp > 0) {
+        if (exp % 2 == 1)
+            result = (result * base) % mod;
+
+        base = (base * base) % mod;
+        exp /= 2;
+    }
+
+    return result;
+}
+
+int main()
+{
+    long long n = 3233;
+    long long e = 17;
+
+    char plaintext[] = "HELLO";
+    long long ciphertext[100];
+    long long codebook[26];
+
+    int length = strlen(plaintext);
+
+    printf("RSA CHARACTER-WISE ENCRYPTION\n");
+    printf("-----------------------------\n");
+
+    printf("Public key: (e = %lld, n = %lld)\n", e, n);
+    printf("Plaintext: %s\n", plaintext);
+
+    printf("\nEncrypted blocks:\n");
+
+    for (int i = 0; i < length; i++) {
+        int value = plaintext[i] - 'A';
+
+        ciphertext[i] = modPower(value, e, n);
+
+        printf("%lld ", ciphertext[i]);
+    }
+
+    for (int i = 0; i < 26; i++) {
+        codebook[i] = modPower(i, e, n);
+    }
+
+    printf("\n\nCodebook attack:\n");
+
+    char recovered[100];
+
+    for (int i = 0; i < length; i++) {
+        for (int j = 0; j < 26; j++) {
+            if (ciphertext[i] == codebook[j]) {
+                recovered[i] = 'A' + j;
+                break;
+            }
+        }
+    }
+
+    recovered[length] = '\0';
+
+    printf("Recovered plaintext: %s\n", recovered);
+
+    printf("\nConclusion:\n");
+    printf("The message was recovered without the private key.\n");
+
+    return 0;
+}
