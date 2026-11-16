@@ -1,0 +1,88 @@
+#include <stdio.h>
+
+long long gcd(long long a, long long b)
+{
+    while (b != 0) {
+        long long temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+
+long long extendedGCD(long long a, long long b,
+                      long long *x, long long *y)
+{
+    if (b == 0) {
+        *x = 1;
+        *y = 0;
+        return a;
+    }
+
+    long long x1, y1;
+    long long g = extendedGCD(b, a % b, &x1, &y1);
+
+    *x = y1;
+    *y = x1 - (a / b) * y1;
+
+    return g;
+}
+
+long long modPower(long long base, long long exp, long long mod)
+{
+    long long result = 1;
+    base %= mod;
+
+    while (exp > 0) {
+        if (exp % 2 == 1)
+            result = (result * base) % mod;
+
+        base = (base * base) % mod;
+        exp /= 2;
+    }
+
+    return result;
+}
+
+int main()
+{
+    long long n = 3233;
+    long long e = 17;
+    long long M = 61;
+
+    printf("RSA COMMON FACTOR ATTACK\n");
+    printf("------------------------\n");
+
+    printf("Public modulus (n) = %lld\n", n);
+    printf("Public exponent (e) = %lld\n", e);
+    printf("Known plaintext block (M) = %lld\n", M);
+
+    long long g = gcd(M, n);
+    printf("\nGCD(M, n) = %lld\n", g);
+
+    if (g > 1 && g < n) {
+
+        long long p = g;
+        long long q = n / g;
+        printf("\nCommon factor found!\n");
+        printf("p = %lld\n", p);
+        printf("q = %lld\n", q);
+        long long phi = (p - 1) * (q - 1);
+        printf("\nphi(n) = %lld\n", phi);
+        long long x, y;
+        extendedGCD(e, phi, &x, &y);
+        long long d = (x % phi + phi) % phi;
+        printf("\nPrivate exponent (d) = %lld\n", d);
+        printf("Private key = (%lld, %lld)\n", d, n);
+        long long C = modPower(M, e, n);
+        long long decrypted = modPower(C, d, n);
+        printf("\nEncrypted block = %lld\n", C);
+        printf("Decrypted block = %lld\n", decrypted);
+    }
+    else {
+        printf("\nNo non-trivial factor found.\n");
+        printf("The private key cannot be recovered using this block.\n");
+    }
+
+    return 0;
+}
