@@ -1,0 +1,83 @@
+#include <stdio.h>
+#define MOD 26
+
+void encrypt(int K[2][2], int P[2], int C[2])
+{
+    for (int i = 0; i < 2; i++) {
+        C[i] = 0;
+
+        for (int j = 0; j < 2; j++) {
+            C[i] += K[i][j] * P[j];
+        }
+
+        C[i] %= MOD;
+    }
+}
+
+void displayMatrix(char name[], int K[2][2])
+{
+    printf("%s\n", name);
+
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++)
+            printf("%d ", K[i][j]);
+
+        printf("\n");
+    }
+}
+
+int main()
+{
+    int K[2][2] = {
+        {3, 3},
+        {2, 5}
+    };
+    int P1[2] = {1, 0};  
+    int P2[2] = {0, 1};  
+
+    int C1[2], C2[2];
+
+    encrypt(K, P1, C1);
+    encrypt(K, P2, C2);
+
+    printf("HILL CIPHER CHOSEN PLAINTEXT ATTACK\n");
+    printf("-----------------------------------\n");
+
+    printf("\nChosen plaintext 1: BA\n");
+    printf("Plaintext vector: [1 0]\n");
+
+    printf("Ciphertext 1: %c%c\n",
+           'A' + C1[0], 'A' + C1[1]);
+
+    printf("\nChosen plaintext 2: AB\n");
+    printf("Plaintext vector: [0 1]\n");
+
+    printf("Ciphertext 2: %c%c\n",
+           'A' + C2[0], 'A' + C2[1]);
+
+    int recoveredK[2][2];
+
+    recoveredK[0][0] = C1[0];
+    recoveredK[1][0] = C1[1];
+
+    recoveredK[0][1] = C2[0];
+    recoveredK[1][1] = C2[1];
+
+    printf("\nRecovered key matrix:\n");
+
+    displayMatrix("K =", recoveredK);
+
+    int testP[2] = {7, 4};  
+    int testC[2];
+
+    encrypt(recoveredK, testP, testC);
+
+    printf("\nVerification:\n");
+    printf("Plaintext: HE\n");
+    printf("Encrypted using recovered key: %c%c\n",
+           'A' + testC[0], 'A' + testC[1]);
+
+    printf("\nChosen plaintext attack successful!\n");
+
+    return 0;
+}
